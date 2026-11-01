@@ -1,11 +1,11 @@
 # Diabetes Patient Analytics Dashboard | 100K+ Records
 
+An interactive healthcare analytics dashboard analysing hospital length of stay, 30-day readmission patterns, and healthcare utilisation among diabetic patients using 100,000+ patient records.
+
 ## How to Run
 1. Download both `index.html` and the CSV dataset file.
 2. Open `index.html` in your browser.
 3. Upload the CSV file when prompted to load the dashboard.
-
-An interactive healthcare analytics dashboard analysing hospital length of stay, 30-day readmission patterns, and healthcare utilisation among diabetic patients using 100,000+ patient records.
 
 ## Data Pipeline
 1. **Data Source:** Diabetic patient dataset sourced from Kaggle (100K+ records).
