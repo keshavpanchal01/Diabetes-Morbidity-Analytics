@@ -7,9 +7,6 @@
 
 An interactive healthcare analytics dashboard analysing hospital length of stay, 30-day readmission patterns, and healthcare utilisation among diabetic patients using 100,000+ patient records.
 
-## Project Overview
-Transformed a large-scale diabetic patient dataset into an interactive analytical dashboard to explore clinical outcomes, patient demographics, disease classifications, treatment patterns, and hospital utilisation.
-
 ## Data Pipeline
 1. **Data Source:** Diabetic patient dataset sourced from Kaggle (100K+ records).
 2. **Data Cleaning:** Cleaned, structured, and transformed raw data using Microsoft Excel.
@@ -19,12 +16,12 @@ Transformed a large-scale diabetic patient dataset into an interactive analytica
 
 ## Key Analytical Modules
 - **Patient Outcomes:** Hospital length of stay and 30-day readmission analysis.
-- **Demographic Analysis:** Patient distribution and outcomes across demographic factors.
+- **Demographic Analysis:**
 - **Disease Classification:** Unified Disease Classification Analysis using ICD-9-CM codes.
-- **Procedure Analysis:** Clinical procedures and their relationship with patient outcomes.
-- **Hospital Utilisation:** Admission patterns and healthcare resource utilisation.
-- **Glycemic Control:** Blood glucose management and associated clinical outcomes.
-- **Medication Analysis:** Medication patterns and their relationship with readmissions and length of stay.
+- **Procedure Analysis:**
+- **Hospital Utilisation:**
+- **Glycemic Control:**
+- **Medication Analysis:**
 
 ## Tech Stack
 - **Dataset:** Kaggle
@@ -32,10 +29,3 @@ Transformed a large-scale diabetic patient dataset into an interactive analytica
 - **Data Storage:** CSV
 - **Frontend:** HTML, CSS, JavaScript
 - **AI-Assisted Development:** Claude AI
-
-## Objective
-Convert large-scale healthcare data into actionable insights through structured data processing, interactive visualisation, and multidimensional analysis of hospital outcomes.
-
----
-
-*From 100K+ raw patient records to an interactive healthcare analytics product.*
