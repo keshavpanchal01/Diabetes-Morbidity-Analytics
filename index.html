@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diabetes Readmission Analytics Dashboard | Google Analytics & Looker Studio Edition</title>
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <!-- PapaParse for local file streaming -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        :root {
+            --bg-body: #fafafa;
+            --bg-card: #f0f0f0;
+            --text-primary: #666666;
+            --text-secondary: #666666;
+            --google-blue: #666666;
+            --google-blue-hover: #666666;
+            --google-blue-light: #e2e2e2;
+            --border-color: #b8b8b8;
+            --shadow-card: 0 1px 2px 0 rgba(184,184,184,0.5), 0 1px 3px 1px rgba(184,184,184,0.3);
+            --shadow-hover: 0 1px 3px 0 rgba(184,184,184,0.5), 0 4px 8px 3px rgba(184,184,184,0.3);
+            --radius-card: 8px;
+            --radius-btn: 4px;
+            --font-family: Tahoma, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-family) !important;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            line-height: 1.5;
+            font-size: 13px;
+            padding-bottom: 60px;
+        }
+
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(250, 250, 250, 0.95);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-brand h1 {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            color: var(--text-primary);
+        }
+
+        .header-brand p {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        nav.nav-bar {
+            display: flex;
+            gap: 4px;
+            background: #e2e2e2;
+            padding: 4px;
+            border-radius: var(--radius-btn);
+            border: 1px solid var(--border-color);
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: none;
+            padding: 6px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease-in-out;
+        }
+
+        .nav-btn:hover {
+            color: var(--text-primary);
+            background: #f0f0f0;
+        }
+
+        .nav-btn.active {
+            background: #fafafa;
+            color: var(--google-blue);
+            box-shadow: 0 1px 2px rgba(184, 184, 184, 0.6);
+        }
+
+        .data-controller {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 12px;
+        }
+
+        .source-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #b8b8b8;
+        }
+
+        .status-dot.active {
+            background: #666666;
+        }
+
+        .btn-action {
+            background: var(--google-blue);
+            color: #fafafa;
+            border: none;
+            padding: 6px 14px;
+            border-radius: var(--radius-btn);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .btn-action:hover {
+            background: var(--google-blue-hover);
+            opacity: 0.85;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            display: none;
+        }
+
+        .file-input-label {
+            background: #e2e2e2;
+            color: var(--text-primary);
+            padding: 6px 14px;
+            border-radius: var(--radius-btn);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            transition: background 0.15s ease;
+        }
+
+        .file-input-label:hover {
+            background: #f0f0f0;
+        }
+
+        .container {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 24px 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .common-subtitle-banner {
+            padding: 12px 18px;
+            background: #f0f0f0;
+            border-left: 4px solid var(--google-blue);
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow-card);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .common-subtitle-banner h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .common-subtitle-banner p {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .filter-panel {
+            background: var(--bg-card);
+            border-radius: var(--radius-card);
+            padding: 16px 20px;
+            box-shadow: var(--shadow-card);
+            border: 1px solid var(--border-color);
+        }
+
+        .filter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .filter-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .reset-btn {
+            background: transparent;
+            border: none;
+            color: var(--google-blue);
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .reset-btn:hover {
+            text-decoration: underline;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+        }
+
+        .filter-group label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-group select {
+            width: 100%;
+            padding: 7px 10px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background: #fafafa;
+            font-size: 12px;
+            color: var(--text-primary);
+            outline: none;
+            transition: border-color 0.15s ease;
+        }
+
+        .filter-group select:focus {
+            border-color: var(--google-blue);
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 16px;
+        }
+
+        .kpi-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-card);
+            padding: 18px 20px;
+            box-shadow: var(--shadow-card);
+            border: 1px solid var(--border-color);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .kpi-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .kpi-value {
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .kpi-sub {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .section-block {
+            display: flex;
+            flex-direction: column;
+            scroll-margin-top: 100px;
+        }
+
+        .chart-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-card);
+            padding: 20px 24px;
+            box-shadow: var(--shadow-card);
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transition: height 0.2s ease;
+        }
+
+        .chart-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .chart-card-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .dimension-selector {
+            display: flex;
+            gap: 3px;
+            background: #e2e2e2;
+            padding: 3px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+
+        .dim-btn {
+            background: transparent;
+            border: none;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .dim-btn.active {
+            background: #fafafa;
+            color: var(--google-blue);
+            box-shadow: 0 1px 2px rgba(184, 184, 184, 0.6);
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 420px;
+        }
+
+        .disease-notes {
+            margin-top: 10px;
+            padding: 8px 12px;
+            background: #fafafa;
+            border-radius: 4px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        @media (max-width: 1024px) {
+            header, .data-controller, .container {
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-brand">
+            <h1>Diabetes Readmission Analytics</h1>
+            <p>Google Analytics & Looker Studio Enterprise Edition</p>
+        </div>
+
+        <nav class="nav-bar">
+            <button class="nav-btn active" onclick="scrollToSection('sec-overview')">Overview</button>
+            <button class="nav-btn" onclick="scrollToSection('sec-demographics')">Demographics</button>
+            <button class="nav-btn" onclick="scrollToSection('sec-procedures')">Procedures</button>
+            <button class="nav-btn" onclick="scrollToSection('sec-interactions')">Interactions</button>
+            <button class="nav-btn" onclick="scrollToSection('sec-clinical')">Clinical & Diagnosis</button>
+            <button class="nav-btn" onclick="scrollToSection('sec-medication')">Medications</button>
+        </nav>
+    </header>
+
+    <div class="data-controller">
+        <div class="source-indicator">
+            <div id="status-dot" class="status-dot"></div>
+            <span id="source-status">Connecting to local server...</span>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <div class="file-input-wrapper">
+                <label for="csvFileInput" class="file-input-label">📁 Select Local CSV File</label>
+                <input type="file" id="csvFileInput" accept=".csv" onchange="handleFileSelect(event)">
+            </div>
+            <button class="btn-action" onclick="loadDataFromBackend()">🔄 Refresh Data</button>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <div class="common-subtitle-banner">
+            <h3>Readmission and Length-of-Stay Analysis</h3>
+            <p>Interactive exploration across clinical, demographic, procedural, and diagnostic dimensions</p>
+        </div>
+
+        <div class="filter-panel">
+            <div class="filter-header">
+                <span class="filter-title">Interactive Cohort Filters</span>
+                <button class="reset-btn" onclick="resetFilters()">Reset All Filters</button>
+            </div>
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label>Age Bracket (Years)</label>
+                    <select id="filter-age" onchange="applyFilters()">
+                        <option value="ALL">All Age Brackets</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Race / Ethnicity</label>
+                    <select id="filter-race" onchange="applyFilters()">
+                        <option value="ALL">All Races</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Gender</label>
+                    <select id="filter-gender" onchange="applyFilters()">
+                        <option value="ALL">All Genders</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>HbA1c Test Result</label>
+                    <select id="filter-a1c" onchange="applyFilters()">
+                        <option value="ALL">All HbA1c Results</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Readmission Outcome</label>
+                    <select id="filter-readmitted" onchange="applyFilters()">
+                        <option value="ALL">All Outcomes</option>
+                        <option value="<30">&lt;30 Days (Early)</option>
+                        <option value=">30">&gt;30 Days (Late)</option>
+                        <option value="NO">No Readmission</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div id="sec-overview" class="section-block">
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-title">Total Encounters</div>
+                    <div class="kpi-value" id="kpi-encounters">--</div>
+                    <div class="kpi-sub" id="kpi-patients-sub">Unique Patients: --</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">30-Day Early Readmit Rate</div>
+                    <div class="kpi-value" id="kpi-readmit-30">--</div>
+                    <div class="kpi-sub" id="kpi-readmit-overall-sub">Overall Readmit: --</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">Avg Length of Stay</div>
+                    <div class="kpi-value" id="kpi-stay">--</div>
+                    <div class="kpi-sub">Hospital Days</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">Avg Lab Procedures</div>
+                    <div class="kpi-value" id="kpi-labs">--</div>
+                    <div class="kpi-sub">Tests Per Visit</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">Avg Medications</div>
+                    <div class="kpi-value" id="kpi-meds">--</div>
+                    <div class="kpi-sub">Administered Meds</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="sec-demographics" class="section-block">
+            <div class="chart-card" id="card-chart-1">
+                <div class="chart-card-header">
+                    <span class="chart-card-title">Demographic Analysis</span>
+                    <div class="dimension-selector">
+                        <button class="dim-btn active" onclick="switchChart1('age', this)">Age (Years)</button>
+                        <button class="dim-btn" onclick="switchChart1('gender', this)">Gender</button>
+                        <button class="dim-btn" onclick="switchChart1('weight', this)">Weight (Pounds)</button>
+                        <button class="dim-btn" onclick="switchChart1('race', this)">Race</button>
+                        <button class="dim-btn" onclick="switchChart1('medical_specialty', this)">Medical Specialty</button>
+                    </div>
+                </div>
+                <div id="chart-container-1" class="chart-container"></div>
+            </div>
+        </div>
+
+        <div id="sec-procedures" class="section-block">
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <span class="chart-card-title">Procedure Analysis</span>
+                    <div class="dimension-selector">
+                        <button class="dim-btn active" onclick="switchChart2('lab_procs', this)">Lab Procedures</button>
+                        <button class="dim-btn" onclick="switchChart2('num_procs', this)">Number of Procedures</button>
+                    </div>
+                </div>
+                <div id="chart-container-2" class="chart-container"></div>
+            </div>
+        </div>
+
+        <div id="sec-interactions" class="section-block">
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <span class="chart-card-title">Hospital Utilisation Analysis</span>
+                    <div class="dimension-selector">
+                        <button class="dim-btn active" onclick="switchChart3('outpatient', this)">Outpatient Visits</button>
+                        <button class="dim-btn" onclick="switchChart3('emergency', this)">Emergency Visits</button>
+                        <button class="dim-btn" onclick="switchChart3('inpatient', this)">Inpatient Visits</button>
+                    </div>
+                </div>
+                <div id="chart-container-3" class="chart-container"></div>
+            </div>
+        </div>
+
+        <div id="sec-clinical" class="section-block">
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <span class="chart-card-title">Unified Disease Classification Analysis (ICD-9-CM)</span>
+                    <div class="dimension-selector">
+                        <button class="dim-btn active" onclick="switchChart4('dist', this)">Disease Distribution</button>
+                        <button class="dim-btn" onclick="switchChart4('readmit', this)">Readmission Rate by Disease</button>
+                        <button class="dim-btn" onclick="switchChart4('stay', this)">Average Length of Stay by Disease</button>
+                    </div>
+                </div>
+                <div id="chart-container-4" class="chart-container" style="height: 480px;"></div>
+                <div class="disease-notes">
+                    <strong>Note:</strong> Combines diagnosis information from primary, secondary, and tertiary diagnosis columns without duplicate counting per encounter.
+                </div>
+            </div>
+        </div>
+
+        <div class="section-block">
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <span class="chart-card-title">Glycemic Control Analysis</span>
+                    <div class="dimension-selector">
+                        <button class="dim-btn active" onclick="switchChart5('a1c', this)">HbA1c Test Result</button>
+                        <button class="dim-btn" onclick="switchChart5('glucose', this)">Serum Glucose Test</button>
+                    </div>
+                </div>
+                <div id="chart-container-5" class="chart-container"></div>
+            </div>
+        </div>
+
+        <div id="sec-medication" class="section-block">
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <span class="chart-card-title">Medication Analysis</span>
+                    <div class="dimension-selector">
+                        <button class="dim-btn active" onclick="switchChart6('change', this)">Medication Change</button>
+                        <button class="dim-btn" onclick="switchChart6('num_meds', this)">Number of Medications</button>
+                        <button class="dim-btn" onclick="switchChart6('diabetes_med', this)">Diabetes Medication Prescribed</button>
+                    </div>
+                </div>
+                <div id="chart-container-6" class="chart-container"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let RAW_DATA = [];
+        let FILTERED_DATA = [];
+
+        let currentChart1Dim = 'age';
+        let currentChart2Dim = 'lab_procs';
+        let currentChart3Dim = 'outpatient';
+        let currentChart4Mode = 'dist';
+        let currentChart5Dim = 'a1c';
+        let currentChart6Dim = 'change';
+
+        const COLOR_RR = '#b8b8b8';
+        const COLOR_LOS = '#666666';
+        const PIE_COLORS = [
+            '#666666', '#b8b8b8', '#e2e2e2', '#666666', '#b8b8b8',
+            '#e2e2e2', '#666666', '#b8b8b8', '#e2e2e2', '#666666',
+            '#b8b8b8', '#e2e2e2', '#666666', '#b8b8b8', '#e2e2e2'
+        ];
+
+        const baseLayout = {
+            font: { family: 'Tahoma, sans-serif', color: '#666666', size: 12 },
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            margin: { t: 30, b: 60, l: 60, r: 60 },
+            template: { layout: {
+                xaxis: { gridcolor: '#e2e2e2', linecolor: '#b8b8b8', zerolinecolor: '#b8b8b8' },
+                yaxis: { gridcolor: '#e2e2e2', linecolor: '#b8b8b8', zerolinecolor: '#b8b8b8' }
+            } },
+            showlegend: true,
+            legend: { orientation: 'h', y: 1.15, font: { family: 'Tahoma, sans-serif', size: 11 } },
+            bargap: 0.35
+        };
+
+        // Consolidates the original "None" and "Normal"/"Norm" HbA1c categories into one "Normal" (in memory only)
+        function normalizeA1C(v) {
+            if (v === null || v === undefined) return 'Normal';
+            const t = String(v).trim();
+            const l = t.toLowerCase();
+            if (t === '' || l === 'none' || l === 'norm' || l === 'normal' || l === 'nan') return 'Normal';
+            return t;
+        }
+
+        function scrollToSection(id) {
+            document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            if (event && event.target) event.target.classList.add('active');
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadDataFromBackend();
+        });
+
+        async function loadDataFromBackend() {
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('source-status');
+
+            statusText.innerText = "Attempting local Flask backend connection...";
+            statusDot.className = "status-dot";
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/api/data');
+                if (!response.ok) throw new Error("Backend server not responding");
+
+                const result = await response.json();
+                RAW_DATA = result.data;
+                statusDot.className = "status-dot active";
+                statusText.innerText = `Connected: ${result.source_path} (${RAW_DATA.length.toLocaleString()} records loaded in-memory)`;
+
+                initDashboard();
+            } catch (err) {
+                statusDot.className = "status-dot";
+                statusText.innerText = "Backend offline. Use 'Select Local CSV File' button above to stream directly.";
+            }
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('source-status');
+
+            statusText.innerText = `Streaming local file: ${file.name}...`;
+
+            Papa.parse(file, {
+                header: true,
+                dynamicTyping: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    RAW_DATA = results.data;
+                    statusDot.className = "status-dot active";
+                    statusText.innerText = `Loaded Local File: ${file.name} (${RAW_DATA.length.toLocaleString()} records)`;
+                    initDashboard();
+                },
+                error: function(err) {
+                    alert("Error parsing CSV file: " + err.message);
+                }
+            });
+        }
+
+        function initDashboard() {
+            populateFilterDropdowns();
+            applyFilters();
+        }
+
+        function populateFilterDropdowns() {
+            const populate = (id, key) => {
+                const select = document.getElementById(id);
+                const currentVal = select.value;
+                
+                select.innerHTML = `<option value="ALL">All ${key.replace('_', ' ').toUpperCase()}s</option>`;
+
+                if (key === 'A1Cresult') {
+                    const a1cOpts = ['Normal', '>7', '>8'];
+                    a1cOpts.forEach(v => {
+                        const opt = document.createElement('option');
+                        opt.value = v;
+                        opt.innerText = v;
+                        select.appendChild(opt);
+                    });
+                } else {
+                    const vals = [...new Set(RAW_DATA.map(d => d[key]))]
+                        .filter(v => v !== null && v !== undefined && v !== '?' && v !== 'Unknown/Invalid')
+                        .sort();
+                    vals.forEach(v => {
+                        const opt = document.createElement('option');
+                        opt.value = v;
+                        opt.innerText = v;
+                        select.appendChild(opt);
+                    });
+                }
+                select.value = currentVal;
+            };
+
+            populate('filter-age', 'age');
+            populate('filter-race', 'race');
+            populate('filter-gender', 'gender');
+            populate('filter-a1c', 'A1Cresult');
+        }
+
+        function resetFilters() {
+            document.getElementById('filter-age').value = 'ALL';
+            document.getElementById('filter-race').value = 'ALL';
+            document.getElementById('filter-gender').value = 'ALL';
+            document.getElementById('filter-a1c').value = 'ALL';
+            document.getElementById('filter-readmitted').value = 'ALL';
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const age = document.getElementById('filter-age').value;
+            const race = document.getElementById('filter-race').value;
+            const gender = document.getElementById('filter-gender').value;
+            const a1c = document.getElementById('filter-a1c').value;
+            const readmitted = document.getElementById('filter-readmitted').value;
+
+            FILTERED_DATA = RAW_DATA.filter(d => {
+                if (age !== 'ALL' && d.age !== age) return false;
+                if (race !== 'ALL' && d.race !== race) return false;
+                if (gender !== 'ALL' && d.gender !== gender) return false;
+                if (a1c !== 'ALL') {
+                    if (normalizeA1C(d.A1Cresult) !== a1c) return false;
+                }
+                if (readmitted !== 'ALL' && d.readmitted !== readmitted) return false;
+                return true;
+            });
+
+            updateKPIs();
+            renderAllCharts();
+        }
+
+        function updateKPIs() {
+            const total = FILTERED_DATA.length;
+            if (total === 0) {
+                document.getElementById('kpi-encounters').innerText = '0';
+                document.getElementById('kpi-readmit-30').innerText = '0%';
+                document.getElementById('kpi-stay').innerText = '0';
+                document.getElementById('kpi-labs').innerText = '0';
+                document.getElementById('kpi-meds').innerText = '0';
+                return;
+            }
+
+            const uniquePatients = new Set(FILTERED_DATA.map(d => d.patient_nbr)).size;
+            const readmit30 = FILTERED_DATA.filter(d => d.readmitted === '<30').length;
+            const readmitTotal = FILTERED_DATA.filter(d => d.readmitted !== 'NO').length;
+
+            const avgStay = (FILTERED_DATA.reduce((s, d) => s + (d.time_in_hospital || 0), 0) / total).toFixed(1);
+            const avgLabs = (FILTERED_DATA.reduce((s, d) => s + (d.num_lab_procedures || 0), 0) / total).toFixed(1);
+            const avgMeds = (FILTERED_DATA.reduce((s, d) => s + (d.num_medications || 0), 0) / total).toFixed(1);
+
+            document.getElementById('kpi-encounters').innerText = total.toLocaleString();
+            document.getElementById('kpi-patients-sub').innerText = `Unique Patients: ${uniquePatients.toLocaleString()}`;
+            document.getElementById('kpi-readmit-30').innerText = `${((readmit30 / total) * 100).toFixed(1)}%`;
+            document.getElementById('kpi-readmit-overall-sub').innerText = `Overall Readmit: ${((readmitTotal / total) * 100).toFixed(1)}%`;
+            document.getElementById('kpi-stay').innerText = avgStay;
+            document.getElementById('kpi-labs').innerText = avgLabs;
+            document.getElementById('kpi-meds').innerText = avgMeds;
+        }
+
+        function renderAllCharts() {
+            renderChart1(currentChart1Dim);
+            renderChart2(currentChart2Dim);
+            renderChart3(currentChart3Dim);
+            renderChart4(currentChart4Mode);
+            renderChart5(currentChart5Dim);
+            renderChart6(currentChart6Dim);
+        }
+
+        function getICD9DiseaseCategory(code) {
+            if (!code || code === '?' || code === 'Unknown' || code === 'nan') {
+                return 'Missing / Unmapped';
+            }
+            const str = String(code).trim();
+            if (str.startsWith('V') || str.startsWith('E')) {
+                return 'Supplementary / External Causes';
+            }
+            const val = parseFloat(str);
+            if (isNaN(val)) return 'Other Symptoms / Ill-defined';
+
+            if ((val >= 390 && val <= 459) || val === 785) return 'Circulatory System';
+            if ((val >= 460 && val <= 519) || val === 786) return 'Respiratory System';
+            if ((val >= 520 && val <= 579) || val === 787) return 'Digestive System';
+            if (val >= 250 && val < 251) return 'Diabetes Mellitus';
+            if ((val >= 240 && val <= 279) || val === 781) return 'Endocrine & Metabolic';
+            if (val >= 800 && val <= 999) return 'Injury & Poisoning';
+            if (val >= 710 && val <= 739) return 'Musculoskeletal';
+            if ((val >= 580 && val <= 629) || val === 788) return 'Genitourinary System';
+            if (val >= 140 && val <= 239) return 'Neoplasms';
+            if (val >= 680 && val <= 709) return 'Skin & Subcutaneous';
+            if (val >= 290 && val <= 319) return 'Mental Disorders';
+            if (val >= 320 && val <= 389) return 'Nervous System & Sense Organs';
+            if (val >= 630 && val <= 679) return 'Pregnancy & Childbirth';
+            return 'Other Symptoms / Ill-defined';
+        }
+
+        function switchChart1(dim, btn) {
+            currentChart1Dim = dim;
+            btn.parentElement.querySelectorAll('.dim-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderChart1(dim);
+        }
+
+        function renderChart1(dim) {
+            const grouped = {};
+            FILTERED_DATA.forEach(d => {
+                let key = d[dim];
+                
+                if (dim === 'race' && (key === '?' || key === 'Unknown' || !key)) return;
+                if (dim === 'gender' && (key === 'Unknown/Invalid' || key === '?' || !key)) return;
+                if (dim === 'weight' && (key === '?' || key === 'Unknown' || !key)) return;
+                if (dim === 'medical_specialty' && (key === '?' || key === 'Unknown' || !key)) return;
+
+                if (!key) key = 'Other';
+                if (!grouped[key]) grouped[key] = { total: 0, readmit: 0, stay: 0 };
+                grouped[key].total++;
+                if (d.readmitted !== 'NO') grouped[key].readmit++;
+                grouped[key].stay += (d.time_in_hospital || 0);
+            });
+
+            let keys = Object.keys(grouped);
+
+            if (dim === 'weight') {
+                const weightOrder = ['[0-25)', '[25-50)', '[50-75)', '[75-100)', '[100-125)', '[125-150)', '[150-175)', '[175-200)', '>200'];
+                keys = keys.sort((a,b) => weightOrder.indexOf(a) - weightOrder.indexOf(b));
+            } else if (dim === 'age') {
+                const ageOrder = ['[0-10)', '[10-20)', '[20-30)', '[30-40)', '[40-50)', '[50-60)', '[60-70)', '[70-80)', '[80-90)', '[90-100)'];
+                keys = keys.sort((a,b) => ageOrder.indexOf(a) - ageOrder.indexOf(b));
+            } else if (dim === 'medical_specialty') {
+                keys = keys.sort();
+            } else {
+                keys = keys.sort();
+            }
+
+            const xDisplayLabels = keys.map(k => {
+                if (dim === 'age') return `${k} Years`;
+                if (dim === 'weight') return `${k} lbs`;
+                return k;
+            });
+
+            const rr = keys.map(k => ((grouped[k].readmit / grouped[k].total) * 100).toFixed(1));
+            const los = keys.map(k => (grouped[k].stay / grouped[k].total).toFixed(1));
+
+            const cardElement = document.getElementById('card-chart-1');
+            const containerElement = document.getElementById('chart-container-1');
+
+            if (dim === 'medical_specialty') {
+                const calculatedHeight = Math.max(520, keys.length * 24);
+                cardElement.style.height = `${calculatedHeight + 100}px`;
+                containerElement.style.height = `${calculatedHeight}px`;
+
+                const trace1 = { y: xDisplayLabels, x: rr, name: 'Readmission Rate (%)', type: 'bar', orientation: 'h', marker: { color: COLOR_RR } };
+                const trace2 = { y: xDisplayLabels, x: los, name: 'Avg Length of Stay (Days)', type: 'scatter', mode: 'lines+markers', xaxis: 'x2', line: { color: COLOR_LOS, width: 2.5 } };
+                
+                const layout = {
+                    ...baseLayout,
+                    height: calculatedHeight,
+                    margin: { t: 30, b: 50, l: 220, r: 60 },
+                    xaxis: { title: 'Readmission Rate (%)', side: 'bottom' },
+                    xaxis2: { title: 'Avg LOS (Days)', overlaying: 'x', side: 'top' },
+                    bargap: 0.25
+                };
+                Plotly.newPlot('chart-container-1', [trace1, trace2], layout, { responsive: true }).then(() => {
+                    window.dispatchEvent(new Event('resize'));
+                });
+            } else {
+                cardElement.style.height = 'auto';
+                containerElement.style.height = '420px';
+
+                const trace1 = { x: xDisplayLabels, y: rr, name: 'Readmission Rate (%)', type: 'bar', marker: { color: COLOR_RR } };
+                const trace2 = { x: xDisplayLabels, y: los, name: 'Avg Length of Stay (Days)', type: 'scatter', mode: 'lines+markers', yaxis: 'y2', line: { color: COLOR_LOS, width: 3 } };
+
+                const layout = {
+                    ...baseLayout,
+                    height: 420,
+                    margin: { t: 30, b: 60, l: 60, r: 60 },
+                    yaxis: { title: 'Readmission Rate (%)', side: 'left' },
+                    yaxis2: { title: 'Avg LOS (Days)', overlaying: 'y', side: 'right' }
+                };
+                Plotly.newPlot('chart-container-1', [trace1, trace2], layout, { responsive: true }).then(() => {
+                    window.dispatchEvent(new Event('resize'));
+                });
+            }
+        }
+
+        function switchChart2(dim, btn) {
+            currentChart2Dim = dim;
+            btn.parentElement.querySelectorAll('.dim-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderChart2(dim);
+        }
+
+        function renderChart2(dim) {
+            const grouped = {};
+            FILTERED_DATA.forEach(d => {
+                let val = dim === 'lab_procs' ? Math.floor((d.num_lab_procedures || 0) / 10) * 10 : (d.num_procedures || 0);
+                let key = dim === 'lab_procs' ? `${val}-${val+9} Labs` : `${val} Procedures`;
+                if (!grouped[key]) grouped[key] = { total: 0, readmit: 0, stay: 0, sortVal: val };
+                grouped[key].total++;
+                if (d.readmitted !== 'NO') grouped[key].readmit++;
+                grouped[key].stay += (d.time_in_hospital || 0);
+            });
+
+            const keys = Object.keys(grouped).sort((a,b) => grouped[a].sortVal - grouped[b].sortVal);
+            const rr = keys.map(k => ((grouped[k].readmit / grouped[k].total) * 100).toFixed(1));
+            const los = keys.map(k => (grouped[k].stay / grouped[k].total).toFixed(1));
+
+            const trace1 = { x: keys, y: rr, name: 'Readmission Rate (%)', type: 'bar', marker: { color: COLOR_RR } };
+            const trace2 = { x: keys, y: los, name: 'Avg Length of Stay (Days)', type: 'scatter', mode: 'lines+markers', yaxis: 'y2', line: { color: COLOR_LOS, width: 3 } };
+
+            const layout = {
+                ...baseLayout,
+                height: 420,
+                yaxis: { title: 'Readmission Rate (%)', side: 'left' },
+                yaxis2: { title: 'Avg LOS (Days)', overlaying: 'y', side: 'right' }
+            };
+            Plotly.newPlot('chart-container-2', [trace1, trace2], layout, { responsive: true });
+        }
+
+        function switchChart3(dim, btn) {
+            currentChart3Dim = dim;
+            btn.parentElement.querySelectorAll('.dim-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderChart3(dim);
+        }
+
+        function renderChart3(dim) {
+            const colKey = dim === 'outpatient' ? 'number_outpatient' : dim === 'emergency' ? 'number_emergency' : 'number_inpatient';
+            const grouped = {};
+            FILTERED_DATA.forEach(d => {
+                const visits = d[colKey] || 0;
+                let key = visits === 0 ? '0 Visits' : visits === 1 ? '1 Visit' : visits === 2 ? '2 Visits' : '3+ Visits';
+                let sortVal = visits >= 3 ? 3 : visits;
+                if (!grouped[key]) grouped[key] = { total: 0, readmit: 0, stay: 0, sortVal: sortVal };
+                grouped[key].total++;
+                if (d.readmitted !== 'NO') grouped[key].readmit++;
+                grouped[key].stay += (d.time_in_hospital || 0);
+            });
+
+            const keys = Object.keys(grouped).sort((a,b) => grouped[a].sortVal - grouped[b].sortVal);
+            const rr = keys.map(k => ((grouped[k].readmit / grouped[k].total) * 100).toFixed(1));
+            const los = keys.map(k => (grouped[k].stay / grouped[k].total).toFixed(1));
+
+            const trace1 = { x: keys, y: rr, name: 'Readmission Rate (%)', type: 'bar', marker: { color: COLOR_RR } };
+            const trace2 = { x: keys, y: los, name: 'Avg Length of Stay (Days)', type: 'scatter', mode: 'lines+markers', yaxis: 'y2', line: { color: COLOR_LOS, width: 3 } };
+
+            const layout = {
+                ...baseLayout,
+                height: 420,
+                yaxis: { title: 'Readmission Rate (%)', side: 'left' },
+                yaxis2: { title: 'Avg LOS (Days)', overlaying: 'y', side: 'right' }
+            };
+            Plotly.newPlot('chart-container-3', [trace1, trace2], layout, { responsive: true });
+        }
+
+        function switchChart4(mode, btn) {
+            currentChart4Mode = mode;
+            btn.parentElement.querySelectorAll('.dim-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderChart4(mode);
+        }
+
+        function renderChart4(mode) {
+            const grouped = {};
+            FILTERED_DATA.forEach(d => {
+                const catsForEncounter = new Set();
+                ['diag_1', 'diag_2', 'diag_3'].forEach(col => {
+                    const cat = getICD9DiseaseCategory(d[col]);
+                    if (cat !== 'Missing / Unmapped') {
+                        catsForEncounter.add(cat);
+                    }
+                });
+
+                catsForEncounter.forEach(cat => {
+                    if (!grouped[cat]) grouped[cat] = { encounters: 0, readmit: 0, stay: 0 };
+                    grouped[cat].encounters++;
+                    if (d.readmitted !== 'NO') grouped[cat].readmit++;
+                    grouped[cat].stay += (d.time_in_hospital || 0);
+                });
+            });
+
+            const categories = Object.keys(grouped).sort((a,b) => grouped[b].encounters - grouped[a].encounters);
+
+            if (mode === 'dist') {
+                const labels = categories;
+                const values = labels.map(l => grouped[l].encounters);
+                const hoverText = labels.map(l => {
+                    const enc = grouped[l].encounters;
+                    const rr = ((grouped[l].readmit / enc) * 100).toFixed(1);
+                    const los = (grouped[l].stay / enc).toFixed(1);
+                    return `<b>${l}</b><br>Encounters: ${enc.toLocaleString()}<br>Readmission Rate: ${rr}%<br>Avg Length of Stay: ${los} Days`;
+                });
+
+                const pieTrace = {
+                    labels: labels,
+                    values: values,
+                    type: 'pie',
+                    hole: 0.45,
+                    textinfo: 'percent',
+                    hoverinfo: 'text',
+                    hovertext: hoverText,
+                    marker: { colors: PIE_COLORS, line: { color: '#fafafa', width: 2 } },
+                    textfont: { color: PIE_COLORS.map(c => c === '#666666' ? '#fafafa' : '#666666') }
+                };
+
+                const layout = {
+                    ...baseLayout,
+                    height: 460,
+                    title: { text: 'Unified Disease Category Distribution (Diag 1, 2, 3 Combined)', font: { family: 'Tahoma, sans-serif', size: 14, color: '#666666' } },
+                    margin: { t: 40, b: 20, l: 20, r: 20 },
+                    showlegend: true,
+                    legend: { orientation: 'r', font: { family: 'Tahoma, sans-serif', size: 11 } }
+                };
+                Plotly.newPlot('chart-container-4', [pieTrace], layout, { responsive: true });
+
+            } else if (mode === 'readmit') {
+                const rrVals = categories.map(l => ((grouped[l].readmit / grouped[l].encounters) * 100).toFixed(1));
+
+                const barTrace = {
+                    x: categories,
+                    y: rrVals,
+                    type: 'bar',
+                    marker: { color: COLOR_RR }
+                };
+
+                const layout = {
+                    ...baseLayout,
+                    height: 460,
+                    title: { text: 'Readmission Rate (%) by Disease Category', font: { family: 'Tahoma, sans-serif', size: 14, color: '#666666' } },
+                    yaxis: { title: 'Readmission Rate (%)' },
+                    xaxis: { tickangle: -30 }
+                };
+                Plotly.newPlot('chart-container-4', [barTrace], layout, { responsive: true });
+
+            } else if (mode === 'stay') {
+                const stayVals = categories.map(l => (grouped[l].stay / grouped[l].encounters).toFixed(1));
+
+                const barTrace = {
+                    x: categories,
+                    y: stayVals,
+                    type: 'bar',
+                    marker: { color: COLOR_LOS }
+                };
+
+                const layout = {
+                    ...baseLayout,
+                    height: 460,
+                    title: { text: 'Average Length of Stay (Days) by Disease Category', font: { family: 'Tahoma, sans-serif', size: 14, color: '#666666' } },
+                    yaxis: { title: 'Avg Length of Stay (Days)' },
+                    xaxis: { tickangle: -30 }
+                };
+                Plotly.newPlot('chart-container-4', [barTrace], layout, { responsive: true });
+            }
+        }
+
+        function switchChart5(dim, btn) {
+            currentChart5Dim = dim;
+            btn.parentElement.querySelectorAll('.dim-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderChart5(dim);
+        }
+
+        function renderChart5(dim) {
+            const grouped = {};
+            FILTERED_DATA.forEach(d => {
+                let val = dim === 'a1c' ? normalizeA1C(d.A1Cresult) : d.max_glu_serum;
+                
+                if (!val || val === 'None' || val === 'Norm' || val === 'nan') {
+                    val = 'Normal';
+                } else if (val === '>7') {
+                    val = '>7';
+                } else if (val === '>8') {
+                    val = '>8';
+                } else if (val === '>200') {
+                    val = '>200';
+                } else if (val === '>300') {
+                    val = '>300';
+                }
+
+                if (!grouped[val]) grouped[val] = { total: 0, readmit: 0, stay: 0 };
+                grouped[val].total++;
+                if (d.readmitted !== 'NO') grouped[val].readmit++;
+                grouped[val].stay += (d.time_in_hospital || 0);
+            });
+
+            let keys = [];
+            if (dim === 'a1c') {
+                const a1cOrder = ['Normal', '>7', '>8'];
+                keys = a1cOrder.filter(k => grouped[k] !== undefined);
+            } else {
+                const gluOrder = ['None / Normal', '>200', '>300'];
+                keys = gluOrder.filter(k => grouped[k] !== undefined);
+            }
+
+            const rr = keys.map(k => ((grouped[k].readmit / grouped[k].total) * 100).toFixed(1));
+            const los = keys.map(k => (grouped[k].stay / grouped[k].total).toFixed(1));
+
+            const trace1 = { x: keys, y: rr, name: 'Readmission Rate (%)', type: 'bar', marker: { color: COLOR_RR } };
+            const trace2 = { x: keys, y: los, name: 'Avg Length of Stay (Days)', type: 'scatter', mode: 'lines+markers', yaxis: 'y2', line: { color: COLOR_LOS, width: 3 } };
+
+            const layout = {
+                ...baseLayout,
+                height: 420,
+                yaxis: { title: 'Readmission Rate (%)', side: 'left' },
+                yaxis2: { title: 'Avg LOS (Days)', overlaying: 'y', side: 'right' }
+            };
+            Plotly.newPlot('chart-container-5', [trace1, trace2], layout, { responsive: true });
+        }
+
+        function switchChart6(dim, btn) {
+            currentChart6Dim = dim;
+            btn.parentElement.querySelectorAll('.dim-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderChart6(dim);
+        }
+
+        function renderChart6(dim) {
+            const grouped = {};
+            FILTERED_DATA.forEach(d => {
+                let val = '';
+                if (dim === 'change') {
+                    val = d.change === 'Ch' ? 'Changed' : d.change === 'No' ? 'No Change' : d.change;
+                } else if (dim === 'diabetes_med') {
+                    val = d.diabetesMed === 'Yes' ? 'Prescribed (Yes)' : d.diabetesMed === 'No' ? 'Not Prescribed (No)' : d.diabetesMed;
+                } else {
+                    let num = d.num_medications || 0;
+                    let bin = Math.floor(num / 5) * 5;
+                    val = `${bin}-${bin+4} Medications`;
+                }
+
+                if (!val) val = 'Unknown';
+                if (!grouped[val]) grouped[val] = { total: 0, readmit: 0, stay: 0 };
+                grouped[val].total++;
+                if (d.readmitted !== 'NO') grouped[val].readmit++;
+                grouped[val].stay += (d.time_in_hospital || 0);
+            });
+
+            const keys = Object.keys(grouped).sort();
+            const rr = keys.map(k => ((grouped[k].readmit / grouped[k].total) * 100).toFixed(1));
+            const los = keys.map(k => (grouped[k].stay / grouped[k].total).toFixed(1));
+
+            const trace1 = { x: keys, y: rr, name: 'Readmission Rate (%)', type: 'bar', marker: { color: COLOR_RR } };
+            const trace2 = { x: keys, y: los, name: 'Avg Length of Stay (Days)', type: 'scatter', mode: 'lines+markers', yaxis: 'y2', line: { color: COLOR_LOS, width: 3 } };
+
+            const layout = {
+                ...baseLayout,
+                height: 420,
+                yaxis: { title: 'Readmission Rate (%)', side: 'left' },
+                yaxis2: { title: 'Avg LOS (Days)', overlaying: 'y', side: 'right' }
+            };
+            Plotly.newPlot('chart-container-6', [trace1, trace2], layout, { responsive: true });
+        }
+    </script>
+</body>
+</html>
